@@ -1,0 +1,71 @@
+// $Id$
+
+REQUIREMENTS
+------------
+This module is designed for Drupal 4.7. Additional PHP version and PEAR
+library requirements are detailed below.
+
+____________
+To use the DAV server, you MUST be running at least PHP 4.4 or newer, and
+have the prerequisite PEAR HTTP_WebDAV_Server package [1] installed.
+
+Due to licensing differences, PEAR packages can't be distributed directly
+with Drupal modules. However, provided your server has the PEAR command line
+tools available, HTTP_WebDAV_Server is easy enough to install. On Unix-like
+servers, just run the following command as root to install the package and
+make it available system-wide:
+
+  # pear install HTTP_WebDAV_Server
+
+On older PEAR versions, you may instead need to specify the explicit package
+URL as follows:
+
+  # pear install \
+      http://download.pear.php.net/package/HTTP_WebDAV_Server-1.0.0RC4.tgz
+
+Failing system-wide installation (if you're on a shared server, for
+instance), you can manually download the package from [1] and install the
+files locally in your Drupal instance as follows (you only need these four
+files, and they must be installed with the shown paths):
+
+  modules/dav/includes/HTTP/WebDAV/Server.php
+  modules/dav/includes/HTTP/WebDAV/Tools/_parse_propfind.php
+  modules/dav/includes/HTTP/WebDAV/Tools/_parse_proppatch.php
+  modules/dav/includes/HTTP/WebDAV/Tools/_parse_lockinfo.php
+
+____________
+To enable the included DAV client support, which allows PHP applications
+(including other Drupal modules) to use the "webdav://" and "webdavs://"
+protocol stream wrappers [2], you MUST be running at least PHP 4.3 or newer,
+and have the PEAR HTTP_WebDAV_Client package [3] installed.
+
+Again, provided a properly working PEAR environment, installation is simple:
+
+  # pear install HTTP_WebDAV_Client
+
+Or, on older PEAR versions:
+
+  # pear install \
+      http://download.pear.php.net/package/HTTP_WebDAV_Client-0.9.7.tgz
+
+Manual installation would proceed similarly as for the DAV server (see
+above), but involves several preliminary PEAR dependencies (at least
+HTTP_Request, Net_URL, Net_Socket) and is left as an exercise for the
+reader.
+
+____________
+[1] http://pear.php.net/package/HTTP_WebDAV_Server/ (1.0.0RC4 or later)
+[2] http://php.net/stream
+[3] http://pear.php.net/package/HTTP_WebDAV_Client/ (0.9.7 or later)
+[4] http://pear.php.net/package/HTTP_Request/
+
+
+INSTALLATION
+------------
+1. Copy all the module files into a subdirectory called modules/dav/
+   under your Drupal installation directory.
+
+2. Go to administer >> modules and enable the `dav' module.
+
+3. Go to administer >> settings >> dav to review and change the
+   configuration options to your liking (e.g. enable the DAV server).

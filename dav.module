@@ -1,0 +1,447 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Provides connectivity for the WebDAV protocol, enabling other modules to
+ * export and use WebDAV resources.
+ */
+
+//////////////////////////////////////////////////////////////////////////////
+// MODULE SETTINGS
+
+define('DAV_ROOT',      variable_get('dav_root', 'dav'));
+define('DAV_SERVER',    variable_get('dav_server', FALSE));
+define('DAV_CLIENT',    variable_get('dav_client', FALSE));
+define('DAV_DOT_FILES', variable_get('dav_dot_files', TRUE));
+define('DAV_TRACE',     variable_get('dav_trace', FALSE));
+define('DAV_CRON',      variable_get('dav_cron', TRUE));
+
+define('DAV_WINDOWS_SERVER_DISCOVERY', variable_get('dav_windows_server_discovery', TRUE));
+define('DAV_WINDOWS_BASIC_AUTH',       variable_get('dav_windows_basic_auth', TRUE));
+define('DAV_WINDOWS_NO_THUMBS_DB',     variable_get('dav_windows_no_thumbs_db', TRUE));
+define('DAV_MACOSX_NO_DS_STORE',       variable_get('dav_macosx_no_ds_store', TRUE));
+define('DAV_MACOSX_NO_FORKS',          variable_get('dav_macosx_no_forks', TRUE));
+
+define('DAV_PEAR_SERVER', 'http://pear.php.net/package/HTTP_WebDAV_Server');
+define('DAV_PEAR_CLIENT', 'http://pear.php.net/package/HTTP_WebDAV_Client');
+
+define('DAV_ROOT_COLLECTION', NULL);
+define('DAV_TRANSIENT_RESOURCE', 'dav_blob');
+
+//////////////////////////////////////////////////////////////////////////////
+// CORE API HOOKS
+
+/**
+ * Implementation of hook_help().
+ */
+function dav_help($section) {
+  switch ($section) {
+    case 'admin/modules#name':
+      return t('dav api');
+    case 'admin/modules#description':
+      return t('Provides connectivity for the WebDAV protocol, enabling other modules to export and use WebDAV resources.');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function dav_perm() {
+  return array('access dav resources', 'create dav resources', 'rename dav resources', 'move dav resources', 'update dav resources', 'delete dav resources');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function dav_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path'     => DAV_ROOT,
+      'title'    => t('dav'),
+      'callback' => 'dav_request',
+      'access'   => TRUE, // access control is handled in the DAV server
+      'type'     => MENU_CALLBACK,
+    );
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function dav_init() {
+  if (DAV_CLIENT) {
+    // Register the "webdav(s)://" PHP stream wrappers (aka fopen()
+    // wrappers) using the PEAR WebDAV Client
+    _dav_load_client();
+  }
+}
+
+/**
+ * Implementation of hook_settings().
+ */
+function dav_settings() {
+  $form = array();
+
+  // DAV server settings
+  $form['server'] = array('#type' => 'fieldset', '#title' => t('DAV server settings'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $form['server']['dav_server'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('DAV server'),
+    '#default_value' => DAV_SERVER,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Whether to enable the DAV server functionality provided by this module. Note that this requires the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Server</a> library to be available.', array('%url' => DAV_PEAR_SERVER)),
+  );
+  $form['server']['dav_root_url'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('DAV URL'),
+    '#default_value' => url(DAV_ROOT . '/', NULL, NULL, TRUE),
+    '#size'          => 60,
+    '#maxlength'     => 255,
+    '#description'   => t('This is the absolute URL to the DAV root collection provided by this module, if the DAV server functionality has been enabled above. Use this path in your DAV client program to access the DAV resources exported by this Drupal site. Note that, at present, this path can\'t be aliased or changed.'),
+    '#attributes'    => array('disabled' => 'disabled'),
+  );
+  $form['server']['dav_dot_files'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Allow hidden file/collection creation'),
+    '#default_value' => DAV_DOT_FILES,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Whether to allow files and collections with a name beginning with a dot character (.) to be created. Files named this way are interpreted as hidden files on Unix systems. While this is enabled by default to provide maximum compatibility with various operating systems and clients, you should consider disabling it if you are sure that no useful information will be stored in hidden files. See also the Windows and Mac OS X compatibility sections, below.'),
+  );
+  $form['server']['dav_trace'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Enable DAV method tracing'),
+    '#default_value' => DAV_TRACE,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Whether to log debug/troubleshooting information on all DAV HTTP methods. Note that enabling this will have a negative impact on performance and you should never use this except for troubleshooting purposes. <em>Requires trace.module.</em>'),
+  );
+
+  if (DAV_SERVER && !_dav_load_server()) {
+    drupal_set_message(t('Warning: unable to load the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Server</a> library.', array('%url' => DAV_PEAR_SERVER)), 'error');
+  }
+
+  // DAV server modules
+  $form['modules'] = array('#type' => 'fieldset', '#title' => t('DAV server modules'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $modules = module_implements('dav_list');
+  if (!empty($modules)) {
+    $header = array(t('Name'), t('Description'));
+    $rows = array();
+    foreach ($modules as $module) {
+      $rows[] = array($module, module_invoke($module, 'help', 'admin/modules#description'));
+    }
+    $modules = theme('table', $header, $rows);
+  }
+  else {
+    $modules = '<div>' . t('No DAV modules currently installed; DAV server disabled.') . '</div>';
+  }
+  $form['modules']['dav_modules'] = array('#type' => 'markup', '#value' => $modules);
+
+  // DAV client settings
+  $form['client'] = array('#type' => 'fieldset', '#title' => t('DAV client settings'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $form['client']['dav_client'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('DAV client'),
+    '#default_value' => DAV_CLIENT,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Whether to attempt loading the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Client</a> library on Drupal initialization in order to provide <tt>webdav://</tt> and <tt>webdavs://</tt> stream wrappers for PHP, allowing the use of remote DAV resources using the regular file system functions in PHP. Disabled by default, enable it if you need it.', array('%url' => DAV_PEAR_CLIENT)),
+  );
+
+  if (DAV_CLIENT && !_dav_load_client()) {
+    drupal_set_message(t('Warning: unable to load the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Client</a> library.', array('%url' => DAV_PEAR_CLIENT)), 'error');
+  }
+
+  // Windows compatibility
+  $form['windows'] = array('#type' => 'fieldset', '#title' => t('Windows compatibility'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $form['windows']['dav_windows_server_discovery'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Expect broken server discovery'),
+    '#default_value' => DAV_WINDOWS_SERVER_DISCOVERY,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('This is a workaround for the Windows XP and Windows Vista WebDAV redirector bug <a target="_blank" href="http://support.microsoft.com/?kbid=831805">KB831805</a>. A <a target="_blank" href="http://www.greenbytes.de/tech/webdav/webfolder-client-list.html#issue-options-req-against-root">similar bug</a> also exists in most versions of the Microsoft Web Folder Client. Leave this enabled if you need to serve any Windows clients.'),
+  );
+  $form['windows']['dav_windows_basic_auth'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Expect invalid FQDN user names'),
+    '#default_value' => DAV_WINDOWS_BASIC_AUTH,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('This is a workaround for the Windows XP WebDAV redirector bug <a target="_blank" href="http://support.microsoft.com/?kbid=315621">KB315621</a>. Leave this enabled if you need to serve Windows XP clients.'),
+  );
+  $form['windows']['dav_windows_no_thumbs_db'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Prevent thumbnail cache (Thumbs.db) creation'),
+    '#default_value' => DAV_WINDOWS_NO_THUMBS_DB,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Disallows the creation of spurious <a target="_blank" href="http://en.wikipedia.org/wiki/Thumbs.db">Thumbs.db</a> files by Windows clients. Leaving this enabled is highly recommended, but a yet better option in some cases may be to <a target="_blank" href="http://en.wikipedia.org/wiki/Thumbs.db#External_links">disable Thumbs.db creation</a> on the client side altogether.'),
+  );
+
+  // Mac OS X compatibility
+  $form['macosx'] = array('#type' => 'fieldset', '#title' => t('Mac OS X compatibility'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $form['macosx']['dav_macosx_no_ds_store'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Prevent .DS_Store file creation'),
+    '#default_value' => DAV_MACOSX_NO_DS_STORE,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Disallows the creation of spurious <a target="_blank" href="http://en.wikipedia.org/wiki/.DS_Store">.DS_Store</a> files by Mac OS X clients. Leaving this enabled is highly recommended, but a yet better option is to <a target="_blank" href="http://docs.info.apple.com/article.html?artnum=301711">disable .DS_Store creation over network connections</a> on the client side altogether.'),
+  );
+  $form['macosx']['dav_macosx_no_forks'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Prevent resource fork creation'),
+    '#default_value' => DAV_MACOSX_NO_FORKS,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Disallows the creation of resouce forks, also known as dot-underscore files because their names start with "._". Unless you know what you are doing and grok what this is all about, it is recommended that you leave this setting enabled.'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function dav_cron() {
+  if (DAV_CRON) {
+    // Purge all expired resource locks from the database
+    db_query("DELETE FROM {dav_locks} WHERE expires_at < %d", time());
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV API HOOKS (NAMESPACE/METADATA)
+
+/**
+ * Implementation of hook_dav_lookup().
+ */
+function dav_dav_lookup($collection, $name) {
+  global $user;
+
+  if (_dav_is_transient_file($name)) {
+    $resources = dav_dav_list($collection);
+    return isset($resources[$name]) ? $resources[$name] : NULL;
+  }
+}
+
+/**
+ * Implementation of hook_dav_list().
+ */
+function dav_dav_list($collection) {
+  global $user;
+
+  $resources = array();
+  if (($container_id = dav_intern_resource($collection, NULL, FALSE)) !== NULL) {
+    $result = db_query("SELECT * FROM {dav_resources} WHERE type = '%s' AND `key` LIKE '%s'", DAV_TRANSIENT_RESOURCE, $container_id . '#%');
+    while ($resource = db_fetch_object($result)) {
+      if (($blob = db_fetch_object(db_query("SELECT * FROM {dav_blobs} WHERE resource_id = %d AND user_id = %d", $resource->id, $user->uid)))) {
+        list(, $name) = explode('#', $resource->key, 2);
+        $resources[$name] = array(DAV_TRANSIENT_RESOURCE, $resource->key);
+      }
+    }
+  }
+  return $resources;
+}
+
+/**
+ * Implementation of hook_dav_propfind().
+ */
+function dav_dav_propfind($resource) {
+  global $user;
+
+  list($type, $key) = $resource;
+  $props = array();
+  switch ($type) {
+    // Somebody has to provide the metadata for the root collection, so we
+    // might as well do it right here to save DAV modules the trouble.
+    case DAV_ROOT_COLLECTION:
+      $props['displayname']      = '/';
+      $props['creationdate']     = time();
+      $props['getlastmodified']  = time();
+      $props['resourcetype']     = 'collection';
+      $props['getcontenttype']   = 'httpd/unix-directory';
+      break;
+    case DAV_TRANSIENT_RESOURCE:
+      if (($blob = _dav_get_transient_blob($resource))) {
+        list(, $name) = explode('#', $key, 2);
+        $props['displayname']      = $name;
+        $props['creationdate']     = time();
+        $props['getlastmodified']  = time();
+        $props['resourcetype']     = '';
+        $props['getcontenttype']   = $blob->content_type;
+        $props['getcontentlength'] = $blob->content_length;
+      }
+      break;
+    default:
+      // TODO: Obtain arbitrary properties for arbitrary resources
+      break;
+  }
+  return $props;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV API HOOKS (VERBS)
+
+/**
+ * Implementation of hook_dav_get().
+ */
+function dav_dav_get($resource, &$options) {
+  global $user;
+
+  if (_dav_is_transient_resource($resource)) {
+    if (($blob = _dav_get_transient_blob($resource))) {
+      $options['mtime'] = time();
+      $options['mimetype'] = $blob->content_type;
+      $options['size'] = $blob->content_length;
+      $options['data'] = $blob->content;
+      return $options;
+    }
+    return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_dav_put().
+ */
+function dav_dav_put($container, $name, &$options, $filepath = NULL) {
+  global $user;
+
+  if (_dav_is_transient_file($name)) {
+    if (empty($filepath)) { // pre-process upload
+      return TRUE; // accept the file upload
+    }
+    else { // post-process upload
+      $resource = array(DAV_TRANSIENT_RESOURCE, dav_intern_resource($container) . '#' . $name);
+      $resource_id = dav_intern_resource($resource, 'dav');
+      return db_query("REPLACE INTO {dav_blobs} (resource_id, user_id, content_type, content_length, content) VALUES (%d, %d, '%s', %d, %b)", $resource_id, $user->uid, $options['content_type'], filesize($filepath), file_get_contents($filepath));
+    }
+  }
+}
+
+/**
+ * Implementation of hook_dav_delete().
+ */
+function dav_dav_delete($resource, $container, $move = FALSE) {
+  global $user;
+
+  if (_dav_is_transient_resource($resource)) {
+    if (($resource_id = dav_intern_resource($resource, NULL, FALSE))) {
+      db_query("DELETE FROM {dav_blobs} WHERE resource_id = %d AND user_id = %d", $resource_id, $user->uid);
+      db_query("DELETE FROM {dav_resources} WHERE id = %d", $resource_id); // Hmm
+      return TRUE;
+    }
+    return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_dav_rename().
+ */
+function dav_dav_rename($resource, $source_name, $target_name) {
+  global $user;
+
+  // TODO: if attempting to rename to non-transient name, we should probably
+  // perform an internal PUT request to handle it correctly
+  if (_dav_is_transient_resource($resource)) {
+    if (($resource_id = dav_intern_resource($resource, NULL, FALSE))) {
+      $key = str_replace($source_name, $target_name, $resource[1]);
+      db_query("UPDATE {dav_resources} SET `key` WHERE id = %d", $key, $resource_id);
+      return TRUE;
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV MODULE IMPLEMENTATION
+
+/**
+ * Menu callback dispatching an incoming DAV request to the
+ * HTTP_WebDAV_Server-based implementation class.
+ */
+function dav_request() {
+  // If DAV server functionality has been disabled, we'll just spew out a
+  // 404 Not Found and pretend this never happened.
+  if (!DAV_SERVER) {
+    return drupal_not_found();
+  }
+
+  // Make sure the administrator understands that installing
+  // HTTP_WebDAV_Server really is not merely optional...
+  if (!_dav_load_server()) {
+    watchdog('dav', t('Unable to serve DAV request because the PEAR HTTP_WebDAV_Server library is not available.'), WATCHDOG_ERROR);
+    return drupal_access_denied();
+  }
+
+  // Make sure that at least one module implements our API:
+  if (count(module_implements('dav_lookup')) == 0) {
+    watchdog('dav', t('Unable to serve DAV request because no modules implementing the DAV API are available.'), WATCHDOG_ERROR);
+    return drupal_access_denied();
+  }
+
+  // All is green, so boot us up to DAV specs and hand over the reins to our
+  // bastard OO offspring of HTTP_WebDAV_Server, pretty much ending Drupal's
+  // active involvement in serving the request:
+  _dav_load_api();
+  $path = substr($_GET['q'], strlen(DAV_ROOT));
+  $path = !empty($path) ? $path : '/';
+  drupal_dav_server::serve(url(DAV_ROOT), $path);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV CORE HELPERS
+
+function _dav_is_transient_file($name) {
+  return ($name[0] == '.'); // TODO
+}
+
+function _dav_is_transient_resource($resource) {
+  return is_array($resource) && $resource[0] == DAV_TRANSIENT_RESOURCE;
+}
+
+function _dav_get_transient_blob($resource) {
+  global $user;
+  if (_dav_is_transient_resource($resource)) {
+    if (($resource_id = dav_intern_resource($resource, NULL, FALSE)) !== NULL) {
+      if (($blob = db_fetch_object(db_query("SELECT * FROM {dav_blobs} WHERE resource_id = %d AND user_id = %d", $resource_id, $user->uid)))) {
+        $blob->content = db_decode_blob($blob->content);
+        return $blob;
+      }
+    }
+  }
+}
+
+function _dav_authenticate($name, $pass) {
+  // This is an ugly special case to support the LDAP auth module, which
+  // does not use Drupal's authentication system.
+  $func = function_exists('_ldapauth_user_authenticate') ? '_ldapauth_user_authenticate' : 'user_authenticate';
+  return $func($name, $pass);
+}
+
+function _dav_init_include_path() {
+  static $done = FALSE;
+  if (!$done) {
+    set_include_path(dirname(__FILE__) . '/includes' . PATH_SEPARATOR . get_include_path());
+    $done = TRUE;
+  }
+}
+
+function _dav_load_server() {
+  _dav_init_include_path();
+  return (@include_once('HTTP/WebDAV/Server.php')) !== FALSE;
+}
+
+function _dav_load_client() {
+  _dav_init_include_path();
+  return (@include_once('HTTP/WebDAV/Client.php')) !== FALSE;
+}
+
+function _dav_load_api() {
+  return (require_once(dirname(__FILE__) . '/dav.inc')) !== FALSE;
+}
+
+function _dav_load_admin() {
+  return (require_once(dirname(__FILE__) . '/dav.admin.inc')) !== FALSE;
+}
+
+function _dav_load_theming() {
+  return (require_once(dirname(__FILE__) . '/dav.theme.inc')) !== FALSE;
+}
+
+//////////////////////////////////////////////////////////////////////////////

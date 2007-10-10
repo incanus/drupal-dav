@@ -1,0 +1,291 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Provides WebDAV access to a administrator-specified file system directory
+ * on the server.
+ */
+
+//////////////////////////////////////////////////////////////////////////////
+// MODULE SETTINGS
+
+define('DAV_FS_ROOT', variable_get('dav_fs_root', file_directory_path() . '/dav'));
+
+define('DAV_FS_DIRECTORY', 'fs_directory');
+define('DAV_FS_FILE',      'fs_file');
+
+//////////////////////////////////////////////////////////////////////////////
+// CORE API HOOKS
+
+/**
+ * Implementation of hook_help().
+ */
+function dav_fs_help($section) {
+  switch ($section) {
+    case 'admin/modules#name':
+      return t('dav file system');
+    case 'admin/modules#description':
+      return t('Provides WebDAV access to a administrator-specified file system directory on the server. <em>Requires dav.module.</em>');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function dav_fs_perm() {
+  return array();
+}
+
+/**
+ * Implementation of hook_settings().
+ */
+function dav_fs_settings() {
+  $form = array();
+
+  // File system settings
+  $form['server'] = array('#type' => 'fieldset', '#title' => t('File system settings'), '#collapsible' => TRUE, '#collapsed' => TRUE);
+  $form['server']['dav_fs_root'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('DAV file system root'),
+    '#default_value' => DAV_FS_ROOT,
+    '#size'          => 60,
+    '#maxlength'     => 255,
+    '#description'   => t('A file system path which will be used as the DAV root directory. The directory has to exist and be writable by Drupal.'),
+  );
+
+  return $form;
+}
+
+function dav_fs_settings_form_validate($form_id, $form_values) {
+  file_check_directory($form_values['dav_fs_root'], TRUE, 'dav_fs_root');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV API HOOKS (NAMESPACE/METADATA)
+
+/**
+ * Implementation of hook_dav_lookup().
+ */
+function dav_fs_dav_lookup($collection, $name) {
+  list($type, $fs_path) = $collection;
+
+  switch ($type) {
+    case DAV_ROOT_COLLECTION:
+    case DAV_FS_DIRECTORY:
+      $path = (!$type ? DAV_FS_ROOT : $fs_path) . '/' . $name;
+      if (file_exists($path)) {
+        return array(is_dir($path) ? DAV_FS_DIRECTORY : DAV_FS_FILE, $path);
+      }
+      break;
+
+    case DAV_FS_FILE:
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_dav_list().
+ */
+function dav_fs_dav_list($collection) {
+  list($type, $fs_path) = $collection;
+  $resources = array();
+
+  switch ($type) {
+    case DAV_ROOT_COLLECTION:
+    case DAV_FS_DIRECTORY: // sub-collection
+      $fs_path = (!$type ? DAV_FS_ROOT : $fs_path);
+      $dir = opendir($fs_path);
+      while ($name = readdir($dir)) {
+        if ($name[0] != '.') {
+          $path = $fs_path . '/' . $name;
+          $type = is_dir($path) ? DAV_FS_DIRECTORY : DAV_FS_FILE;
+          $resources[$name] = array($type, $path);
+        }
+      }
+      break;
+
+    case DAV_FS_FILE:
+      break;
+  }
+
+  return $resources;
+}
+
+/**
+ * Implementation of hook_dav_propfind().
+ */
+function dav_fs_dav_propfind($resource) {
+  list($type, $fs_path) = $resource;
+  $props = array();
+
+  switch ($type) {
+    case DAV_FS_DIRECTORY:
+      $props['displayname']      = basename($fs_path);
+      $props['creationdate']     = filectime($fs_path);
+      $props['getlastmodified']  = filemtime($fs_path);
+      $props['resourcetype']     = 'collection';
+      $props['getcontenttype']   = 'httpd/unix-directory';
+      break;
+
+    case DAV_FS_FILE:
+      $props['displayname']      = basename($fs_path);
+      $props['creationdate']     = filectime($fs_path);
+      $props['getlastmodified']  = filemtime($fs_path);
+      $props['resourcetype']     = '';
+      $props['getcontenttype']   = _dav_fs_mime_type($fs_path);
+      $props['getcontentlength'] = filesize($fs_path);
+      break;
+  }
+
+  return $props;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV API HOOKS (VERBS)
+
+/**
+ * Implementation of hook_dav_get().
+ */
+function dav_fs_dav_get($resource, &$options) {
+  list($type, $fs_path) = $resource;
+
+  switch ($type) {
+    case DAV_FS_FILE:
+      $options['mtime'] = filemtime($fs_path);
+      $options['mimetype'] = _dav_fs_mime_type($fs_path);
+      $options['size'] = filesize($fs_path);
+      $options['stream'] = fopen($fs_path, 'r');
+      return $options;
+  }
+}
+
+/**
+ * Implementation of hook_dav_put().
+ */
+function dav_fs_dav_put($container, $name, &$options, $filepath = NULL) {
+  list($type, $fs_path) = $container;
+
+  switch ($type) {
+    case DAV_ROOT_COLLECTION:
+    case DAV_FS_DIRECTORY:
+      if (empty($filepath)) { // pre-process upload
+        return TRUE; // accept file upload
+      }
+      else { // post-process upload
+        $path = (!$type ? DAV_FS_ROOT : $fs_path) . '/' . $name;
+        if (!$options['new']) {
+          unlink($path);
+        }
+        rename($filepath, $path);
+      }
+      return file_exists($path);
+  }
+}
+
+/**
+ * Implementation of hook_dav_mkcol().
+ */
+function dav_fs_dav_mkcol($container, $name) {
+  list($type, $fs_path) = $container;
+
+  switch ($type) {
+    case DAV_ROOT_COLLECTION:
+    case DAV_FS_DIRECTORY:
+      $path = (!$type ? DAV_FS_ROOT : $fs_path) . '/' . $name;
+      if (mkdir($path, 0777))
+        return array(DAV_FS_DIRECTORY, $path);
+      return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_dav_delete().
+ */
+function dav_fs_dav_delete($resource, $container, $move = FALSE) {
+  list($type, $fs_path) = $resource;
+
+  switch ($type) {
+    case DAV_FS_DIRECTORY:
+      return rmdir($fs_path);
+
+    case DAV_FS_FILE:
+      return unlink($fs_path);
+  }
+}
+
+/**
+ * Implementation of hook_dav_rename().
+ */
+function dav_fs_dav_rename($resource, $source_name, $target_name) {
+  list($type, $fs_path) = $resource;
+
+  switch ($type) {
+    case DAV_FS_DIRECTORY:
+    case DAV_FS_FILE:
+      $fs_path = dirname($fs_path);
+      return rename($fs_path . '/' . $source_name, $fs_path . '/' . $target_name) !== FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_dav_move().
+ */
+function dav_fs_dav_move($resource, $source_path, $target_path) {
+  list($type, $object) = $resource;
+
+  switch ($type) {
+    case DAV_FS_DIRECTORY:
+    case DAV_FS_FILE:
+      $source_name = array_pop($source_path);
+      list($source_type, $source) = _dav_resolve($source_path);
+      $target_name = array_pop($target_path);
+      list($target_type, $target) = _dav_resolve($target_path);
+
+      switch ($target_type) {
+        case DAV_ROOT_COLLECTION:
+        case DAV_FS_DIRECTORY:
+          $source_path = (!$source_type ? DAV_FS_ROOT : $source) . '/' . $source_name;
+          $target_path = (!$target_type ? DAV_FS_ROOT : $target) . '/' . $target_name;
+          return rename($source_path, $target_path);
+      }
+      return NULL; // we don't know how to handle the given parent type
+  }
+}
+
+/**
+ * Implementation of hook_dav_copy().
+ */
+function dav_fs_dav_copy($resource, $source_path, $target_path) {
+  list($type, $object) = $resource;
+
+  switch ($type) {
+    case DAV_FS_DIRECTORY:
+      // TODO: Implement recursive copying of directories
+      return FALSE;
+
+    case DAV_FS_FILE:
+      $source_name = array_pop($source_path);
+      list($source_type, $source) = _dav_resolve($source_path);
+      $target_name = array_pop($target_path);
+      list($target_type, $target) = _dav_resolve($target_path);
+
+      switch ($target_type) {
+        case DAV_ROOT_COLLECTION:
+        case DAV_FS_DIRECTORY:
+          $source_path = (!$source_type ? DAV_FS_ROOT : $source) . '/' . $source_name;
+          $target_path = (!$target_type ? DAV_FS_ROOT : $target) . '/' . $target_name;
+          return copy($source_path, $target_path);
+      }
+      return NULL; // we don't know how to handle the given parent type
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// DAV FS HELPERS
+
+function _dav_fs_mime_type($filepath) {
+  return 'application/binary';
+}
+
+//////////////////////////////////////////////////////////////////////////////

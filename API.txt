@@ -1,0 +1,92 @@
+// $Id$
+
+This document is intended for developers who wish to utilize the DAV API or
+troubleshoot the operation of DAV modules.
+
+DATA TYPES
+----------
+
+  dav resource
+
+    This is an array of two elements.
+
+
+HOOKS API
+---------
+(This is yet to be written. For the time being, refer to file_server.module
+as the canonical example of implementing the API provided by dav.module.)
+
+  NAMESPACE QUERIES
+  -----------------
+    hook_dav_lookup()
+    hook_dav_list()
+
+  METADATA QUERIES
+  ----------------
+    hook_dav_propfind()
+
+  READ-ONLY OPERATIONS
+  --------------------
+    hook_dav_get()
+
+  MUTATIVE OPERATIONS
+  -------------------
+    hook_dav_put()
+    hook_dav_mkcol()
+    hook_dav_delete()
+
+  NAMESPACE OPERATIONS
+  --------------------
+    hook_dav_rename()
+    hook_dav_move()
+    hook_dav_copy()
+
+  LOCKING OPERATIONS
+  ------------------
+    hook_dav_lock()
+    hook_dav_unlock()
+
+GOTCHAS
+-------
+For DAV development work, you can't rely on the misguided-but-popular
+tracing method of using var_dump() or print_r(), as any extraneous output
+during the page request will simply be considered malformed input by the DAV
+client. You also can't really test most of your code from the browser, as
+DAV relies on a set of HTTP methods that your browser is unlikely to
+support.
+
+Instead, you should either write debugging output to the Drupal watchdog or
+a file, use a real PHP debugger like those based on the open-source XDebug
+extension, or perhaps try out the Trace module for Drupal.
+
+DEBUGGING
+---------
+DAV problems can be difficult to troubleshoot. This section gives some
+pointers on where to start.
+
+If you're having troubles with a high-level GUI client (like the ones
+included with Mac OS X or Windows), the first step is to shed some bloat and
+uncertainty by trying out the cadaver command-line client as advised in
+README.txt. Cadaver is simple enough that it should always work; if it
+doesn't, you may have broken DAV at the application protocol level.
+
+If so, you'll want to capture the HTTP traffic between your DAV client and
+the Drupal server in order to troubleshoot. There are a great variety of
+tools to accomplish this; in general, they are called packet sniffers or
+protocol analyzers. Some popular ones include the GUI-based Wireshark
+(formerly known as Ethereal) and the command-line tools tcpdump and tcpflow.
+Depending on your setup, you can run these tools either on the server or on
+your computer.
+
+Here's an example of using tcpflow on Mac OS X (to adjust for your specific
+situation, read the tcpflow manual page):
+
+  # sudo tcpflow -c -i en0 -v port http
+
+This will show you both the client request as well as the server response,
+directly in your terminal window. (You'll also gain an undying appreciation
+of the XML hell DAV is based on.)
+
+On Mac OS X, the easiest way to install tcpflow is to use MacPorts. For most
+Linux and *BSD distributions, tcpflow is available directly in the package
+repository. On Windows, well, try Wireshark.

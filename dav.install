@@ -1,0 +1,81 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * DAV module installation and upgrade code.
+ */
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Implementation of hook_install().
+ */
+function dav_install() {
+  // update_sql() is normally only available for upgrades
+  if (!function_exists('update_sql')) {
+    function update_sql($sql) { return db_query($sql); }
+  }
+
+  dav_update_1();
+
+  drupal_set_message('DAV module successfully installed.');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function dav_uninstall() {}
+
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Implementation of hook_update_N().
+ */
+function dav_update_1() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      return array_map('update_sql', array(
+        "CREATE TABLE {dav_resources} (
+          `id` int(10) unsigned NOT NULL default '0',
+          `type` varchar(64) NOT NULL default '',
+          `key` varchar(255) NOT NULL default '',
+          `module` varchar(64) NOT NULL default '',
+          PRIMARY KEY (`id`),
+          UNIQUE INDEX (`type`, `key`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
+        "CREATE TABLE {dav_blobs} (
+          `resource_id` int(10) unsigned NOT NULL default '0',
+          `user_id` int(10) unsigned NOT NULL default '0',
+          `content_type` varchar(64) default NULL,
+          `content_length` int(10) unsigned NOT NULL default '0',
+          `content` longblob,
+          PRIMARY KEY (`resource_id`, `user_id`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
+        "CREATE TABLE {dav_locks} (
+          `id` int(10) unsigned NOT NULL default '0',
+          `resource_id` int(10) unsigned NOT NULL default '0',
+          `user_id` int(10) unsigned NOT NULL default '0',
+          `token` varchar(255) NOT NULL default '',
+          `depth` int(10) NOT NULL default '0',
+          `is_writelock` tinyint(1) unsigned NOT NULL default '0',
+          `is_exclusive` tinyint(1) unsigned NOT NULL default '0',
+          `created_at` int(10) unsigned NOT NULL default '0',
+          `updated_at` int(10) unsigned NOT NULL default '0',
+          `expires_at` int(10) unsigned NOT NULL default '0',
+          PRIMARY KEY (`id`),
+          UNIQUE INDEX (`token`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
+        "CREATE TABLE {dav_properties} (
+          `resource_id` int(10) unsigned NOT NULL default '0',
+          `namespace` varchar(128) NOT NULL default '',
+          `name` varchar(128) NOT NULL default '',
+          `value` text,
+          PRIMARY KEY (`resource_id`, `namespace`, `name`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
+      ));
+    case 'pgsql':
+      return array(); // FIXME
+  }
+}

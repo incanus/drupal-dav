@@ -1,0 +1,5 @@
+; $Id$
+name = DAV API
+description = Provides connectivity for the WebDAV protocol, enabling other modules to export and use WebDAV resources.
+package = File management
+dependencies = 
