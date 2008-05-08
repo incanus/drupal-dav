@@ -7,75 +7,241 @@
  */
 
 //////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function dav_enable() {
+  drupal_set_message(t('DAV API successfully installed. Please review the available <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/settings/dav'))));
+}
 
 /**
  * Implementation of hook_install().
  */
 function dav_install() {
-  // update_sql() is normally only available for upgrades
-  if (!function_exists('update_sql')) {
-    function update_sql($sql) { return db_query($sql); }
-  }
-
-  dav_update_1();
-
-  drupal_set_message('DAV module successfully installed.');
+  drupal_install_schema('dav');
 }
 
 /**
  * Implementation of hook_uninstall().
  */
-function dav_uninstall() {}
-
-//////////////////////////////////////////////////////////////////////////////
+function dav_uninstall() {
+  drupal_uninstall_schema('dav');
+}
 
 /**
- * Implementation of hook_update_N().
+ * Implementation of hook_requirements().
  */
-function dav_update_1() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      return array_map('update_sql', array(
-        "CREATE TABLE {dav_resources} (
-          `id` int(10) unsigned NOT NULL default '0',
-          `type` varchar(64) NOT NULL default '',
-          `key` varchar(255) NOT NULL default '',
-          `module` varchar(64) NOT NULL default '',
-          PRIMARY KEY (`id`),
-          UNIQUE INDEX (`type`, `key`)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
-        "CREATE TABLE {dav_blobs} (
-          `resource_id` int(10) unsigned NOT NULL default '0',
-          `user_id` int(10) unsigned NOT NULL default '0',
-          `content_type` varchar(64) default NULL,
-          `content_length` int(10) unsigned NOT NULL default '0',
-          `content` longblob,
-          PRIMARY KEY (`resource_id`, `user_id`)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
-        "CREATE TABLE {dav_locks} (
-          `id` int(10) unsigned NOT NULL default '0',
-          `resource_id` int(10) unsigned NOT NULL default '0',
-          `user_id` int(10) unsigned NOT NULL default '0',
-          `token` varchar(255) NOT NULL default '',
-          `depth` int(10) NOT NULL default '0',
-          `is_writelock` tinyint(1) unsigned NOT NULL default '0',
-          `is_exclusive` tinyint(1) unsigned NOT NULL default '0',
-          `created_at` int(10) unsigned NOT NULL default '0',
-          `updated_at` int(10) unsigned NOT NULL default '0',
-          `expires_at` int(10) unsigned NOT NULL default '0',
-          PRIMARY KEY (`id`),
-          UNIQUE INDEX (`token`)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
-        "CREATE TABLE {dav_properties} (
-          `resource_id` int(10) unsigned NOT NULL default '0',
-          `namespace` varchar(128) NOT NULL default '',
-          `name` varchar(128) NOT NULL default '',
-          `value` text,
-          PRIMARY KEY (`resource_id`, `namespace`, `name`)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */",
-      ));
-    case 'pgsql':
-      return array(); // FIXME
+function dav_requirements($phase) {
+  $requirements = array();
+  $t = get_t(); // Ensure translations don't break at install time
+
+  if ($phase == 'install') {
+    module_load_include('module', 'dav');
+
+    if (!_dav_load_server()) {
+      $requirements['dav_server'] = array(
+        'title' => '',
+        'value' => '',
+        'description' => $t('The <a href="@pear">PEAR HTTP_WebDAV_Server</a> library is not installed. You must install this library in order to enable the DAV API. To install, <a href="@download">download</a> the latest version of the library and unzip it to %path under the Drupal directory. For more information please refer to INSTALL.txt.', array('@pear' => 'http://pear.php.net/package/HTTP_WebDAV_Server', '@download' => 'http://pear.php.net/package/HTTP_WebDAV_Server/download', '%path' => drupal_get_path('module', 'dav') . '/includes/')),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
   }
+
+  return $requirements;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Schema API hooks
+
+/**
+ * Implementation of hook_schema().
+ */
+function dav_schema() {
+  return array(
+    'dav_resources' => array(
+      'description' => t(''),
+      'fields' => array(
+        'id' => array(             // `id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'type' => array(           // `type` varchar(64) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 64,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'key' => array(            // `key` varchar(255) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 255,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'module' => array(         // `module` varchar(64) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 64,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+      ),
+      'primary key' => array('id'),
+      'unique keys' => array('type_key' => array('type', '`key`')), // HACK: these column names are not quoted, so 'key' causes an error in MySQL
+    ),
+    'dav_blobs' => array(
+      'description' => t(''),
+      'fields' => array(
+        'resource_id' => array(    // `resource_id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'user_id' => array(        // `user_id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'content_type' => array(   // `content_type` varchar(64) default NULL,
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 64,
+          'default'     => NULL,
+        ),
+        'content_length' => array( // `content_length` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'content' => array(        // `content` longblob,
+          'description' => t(''),
+          'type'        => 'blob',
+          'size'        => 'big',
+        ),
+      ),
+      'primary key' => array('resource_id', 'user_id'),
+    ),
+    'dav_locks' => array(
+      'description' => t(''),
+      'fields' => array(
+        'id' => array(             // `id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'resource_id' => array(    // `resource_id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'user_id' => array(        // `user_id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'token' => array(          // `token` varchar(255) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 255,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'depth' => array(          // `depth` int(10) NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'is_writelock' => array(   // `is_writelock` tinyint(1) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'size'        => 'tiny',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'is_exclusive' => array(   // `is_exclusive` tinyint(1) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'size'        => 'tiny',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'created_at' => array(     // `created_at` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'updated_at' => array(     // `updated_at` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'expires_at' => array(     // `expires_at` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+      ),
+      'primary key' => array('id'),
+      'unique keys' => array('token' => array('token')),
+    ),
+    'dav_properties' => array(
+      'description' => t(''),
+      'fields' => array(
+        'resource_id' => array(    // `resource_id` int(10) unsigned NOT NULL default '0',
+          'description' => t(''),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'namespace' => array(      // `namespace` varchar(128) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 128,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'name' => array(           // `name` varchar(128) NOT NULL default '',
+          'description' => t(''),
+          'type'        => 'varchar',
+          'length'      => 128,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'value' => array(          // `value` text,
+          'description' => t(''),
+          'type'        => 'text',
+        ),
+      ),
+      'primary key' => array('resource_id', 'namespace', 'name'),
+    ),
+  );
 }

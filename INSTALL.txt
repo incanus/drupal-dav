@@ -1,13 +1,17 @@
 // $Id$
 
+NOTE: This is experimental software meant for advanced users; assume nothing
+works, and you may be pleasantly surprised. And when it breaks, you get to
+keep both pieces.
+
 REQUIREMENTS
 ------------
-This module is designed for Drupal 4.7. Additional PHP version and PEAR
+This module requires Drupal 6.x and PHP 5.2.x (or newer). Additional PEAR
 library requirements are detailed below.
 
 ____________
-To use the DAV server, you MUST be running at least PHP 4.4 or newer, and
-have the prerequisite PEAR HTTP_WebDAV_Server package [1] installed.
+To use the DAV server, you MUST have the prerequisite PEAR
+HTTP_WebDAV_Server package [1] installed.
 
 Due to licensing differences, PEAR packages can't be distributed directly
 with Drupal modules. However, provided your server has the PEAR command line
@@ -36,8 +40,8 @@ files, and they must be installed with the shown paths):
 ____________
 To enable the included DAV client support, which allows PHP applications
 (including other Drupal modules) to use the "webdav://" and "webdavs://"
-protocol stream wrappers [2], you MUST be running at least PHP 4.3 or newer,
-and have the PEAR HTTP_WebDAV_Client package [3] installed.
+protocol stream wrappers [2], you MUST have the PEAR HTTP_WebDAV_Client
+package [3] installed.
 
 Again, provided a properly working PEAR environment, installation is simple:
 
@@ -62,10 +66,13 @@ ____________
 
 INSTALLATION
 ------------
-1. Copy all the module files into a subdirectory called modules/dav/
-   under your Drupal installation directory.
 
-2. Go to administer >> modules and enable the `dav' module.
+  1. Copy all the module files into a subdirectory called modules/dav/
+     under your Drupal installation directory.
 
-3. Go to administer >> settings >> dav to review and change the
-   configuration options to your liking (e.g. enable the DAV server).
+  2. Go to Administer >> Site building >> Modules and enable the DAV API
+     and DAV FS modules.
+
+  3. Go to Administer >> Site configuration >> DAV settings to review and
+     change the configuration options to your liking (e.g. enable the DAV
+     server).

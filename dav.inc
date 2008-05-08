@@ -7,7 +7,7 @@
  */
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV CONSTANTS
+// DAV constants
 
 define('STATUS_102', '102 Processing');
 define('STATUS_200', '200 OK');
@@ -27,7 +27,7 @@ define('STATUS_507', '507 Insufficient Storage');
 define('DAV_UPLOAD_KEY', 'dav_upload');
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV IMPLEMENTATION
+// DAV implementation
 
 /**
  * DAV server implementation based on HTTP_WebDAV_Server from PEAR.
@@ -42,7 +42,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
   /**
    * Called from dav.module to serve an incoming DAV request.
    */
-  /*static*/ function serve($script_name, $path) {
+  static function serve($script_name, $path) {
     $server = new drupal_dav_server();
     $server->http_auth_realm = variable_get('site_name', $server->http_auth_realm);
     $server->_SERVER['SCRIPT_NAME'] = $script_name;
@@ -106,13 +106,13 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
     }
 
     // Check authorization for anonymous or registered user
-    $access = user_access('access dav resources');
+    $access = user_access('access DAV resources');
     if (!is_null($username) && !$access) {
       // We will only log failed authentication requests, since for
       // successful authentication we have no means to distinguish the
       // initial handshake from every subsequent request which may include
       // HTTP authentication credentials.
-      watchdog('dav', t('Login attempt failed for %user.', array('%user' => theme('placeholder', $username))));
+      watchdog('dav', 'Login attempt failed for %user.', array('%user' => theme('placeholder', $username)));
     }
     return $access;
   }
@@ -206,13 +206,13 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
     if ($resource = dav_lookup($parent, $name)) {
       // This resource will be overwritten
       $options['new'] = FALSE;
-      if (!user_access('update dav resources'))
+      if (!user_access('update DAV resources'))
         return STATUS_403; // Forbidden
     }
     else {
       // This is a new resource
       $options['new'] = TRUE;
-      if (!user_access('create dav resources'))
+      if (!user_access('create DAV resources'))
         return STATUS_403; // Forbidden
     }
 
@@ -262,7 +262,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
     if ($error = $this->_prepare_copy_or_move($options, $target_path))
       return $error;
 
-    if (!user_access('create dav resources'))
+    if (!user_access('create DAV resources'))
       return STATUS_403; // Forbidden
 
     if (!_dav_dispatch('copy', $source, $source_path, $target_path))
@@ -297,14 +297,14 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
 
     // If the source and target collections are the same, then this becomes a simple rename operation
     if ($source_path == $target_path) {
-      if (!user_access('rename dav resources'))
+      if (!user_access('rename DAV resources'))
         return STATUS_403; // Forbidden
 
       if (($result = _dav_dispatch('rename', $source, $source_name, $target_name)) !== TRUE)
         return is_string($result) ? $result : STATUS_409; // Conflict
     }
     else {
-      if (!user_access('move dav resources'))
+      if (!user_access('move DAV resources'))
         return STATUS_403; // Forbidden
 
       array_push($source_path, $source_name);
@@ -333,7 +333,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
 
     // Obliterate the target, if necessary and access rights to do so
     if ($target) {
-      if (!user_access('delete dav resources'))
+      if (!user_access('delete DAV resources'))
         return STATUS_403; // Forbidden
       if (!_dav_dispatch('delete', $target))
         return STATUS_409;
@@ -348,7 +348,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
   function DELETE($options) {
     _dav_trace('delete', $options);
 
-    if (!user_access('delete dav resources'))
+    if (!user_access('delete DAV resources'))
       return STATUS_403; // Forbidden
 
     $path = _dav_explode_path($options['path']);
@@ -375,7 +375,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
   function MKCOL($options) {
     _dav_trace('mkcol', $options);
 
-    if (!user_access('create dav resources'))
+    if (!user_access('create DAV resources'))
       return STATUS_403; // Forbidden
 
     $path = _dav_explode_path($options['path']);
@@ -548,7 +548,7 @@ function dav_propfind($resource) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV HELPERS
+// DAV helpers
 
 /**
  * Invokes a DAV hook in all modules which implement the DAV API.
@@ -655,9 +655,6 @@ function _dav_resources($path, $parent, $depth = 0) {
   return $files;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// DAV HELPERS
-
 function _dav_implode_path($path, $name = NULL) {
   return (empty($path) ? '/' : '/' . implode('/', $path) . '/') . ($name ? $name : '');
 }
@@ -697,7 +694,7 @@ function _dav_trace($method, $options = NULL) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV CRUD HELPERS
+// DAV CRUD helpers
 
 function dav_intern_resource($resource, $module = '', $auto_create = TRUE) {
   list($type, $key) = $resource;
@@ -751,5 +748,3 @@ function dav_delete_property($resource, $namespace, $name) {
     return db_query("DELETE FROM {dav_properties} WHERE resource_id = %d AND namespace = '%s' AND name = '%s'", $resource_id, $namespace, $name);
   }
 }
-
-//////////////////////////////////////////////////////////////////////////////

@@ -7,12 +7,12 @@
  */
 
 //////////////////////////////////////////////////////////////////////////////
-// THEME CONSTANTS
+// Theme constants
 
 define('DAV_LS_FORMAT', '%12s  %-19s  %-s');
 
 //////////////////////////////////////////////////////////////////////////////
-// THEME IMPLEMENTATION
+// Theme implementation
 
 /**
  * Renders a themed DAV collection index.
@@ -87,14 +87,13 @@ function theme_dav_footer() {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// THEME HELPERS
+// Theme helpers
 
 function _dav_theme_resource($path, $name, $resource) {
   list($type, $item) = $resource;
 
+  $theme_registry = theme_get_registry();
   $theme_func = 'dav_' . $type;
-  $theme_func = theme_get_function($theme_func) ? $theme_func : 'dav_resource';
+  $theme_func = isset($theme_registry[$theme_func]) ? $theme_func : 'dav_resource';
   return theme($theme_func, $path, $name, $resource);
 }
-
-//////////////////////////////////////////////////////////////////////////////

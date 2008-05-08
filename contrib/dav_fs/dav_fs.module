@@ -8,7 +8,7 @@
  */
 
 //////////////////////////////////////////////////////////////////////////////
-// MODULE SETTINGS
+// Module settings
 
 define('DAV_FS_ROOT', variable_get('dav_fs_root', file_directory_path() . '/dav'));
 
@@ -16,17 +16,15 @@ define('DAV_FS_DIRECTORY', 'fs_directory');
 define('DAV_FS_FILE',      'fs_file');
 
 //////////////////////////////////////////////////////////////////////////////
-// CORE API HOOKS
+// Core API hooks
 
 /**
  * Implementation of hook_help().
  */
-function dav_fs_help($section) {
-  switch ($section) {
-    case 'admin/modules#name':
-      return t('dav file system');
-    case 'admin/modules#description':
-      return t('Provides WebDAV access to a administrator-specified file system directory on the server. <em>Requires dav.module.</em>');
+function dav_fs_help($path, $arg = NULL) {
+  switch ($path) {
+    case 'admin/settings/dav/fs':
+      return '<p>' . t('') . '</p>'; // TODO
   }
 }
 
@@ -34,35 +32,27 @@ function dav_fs_help($section) {
  * Implementation of hook_perm().
  */
 function dav_fs_perm() {
-  return array();
+  return array(); // TODO
 }
 
 /**
- * Implementation of hook_settings().
+ * Implementation of hook_menu().
  */
-function dav_fs_settings() {
-  $form = array();
-
-  // File system settings
-  $form['server'] = array('#type' => 'fieldset', '#title' => t('File system settings'), '#collapsible' => TRUE, '#collapsed' => TRUE);
-  $form['server']['dav_fs_root'] = array(
-    '#type'          => 'textfield',
-    '#title'         => t('DAV file system root'),
-    '#default_value' => DAV_FS_ROOT,
-    '#size'          => 60,
-    '#maxlength'     => 255,
-    '#description'   => t('A file system path which will be used as the DAV root directory. The directory has to exist and be writable by Drupal.'),
+function dav_fs_menu() {
+  return array(
+    // Administer >> Site configuration >> DAV settings
+    'admin/settings/dav/dav_fs' => array(
+      'title' => 'File system backend',
+      'access arguments' => array('administer site configuration'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('dav_fs_admin_settings'),
+      'file' => 'dav_fs.admin.inc',
+    ),
   );
-
-  return $form;
-}
-
-function dav_fs_settings_form_validate($form_id, $form_values) {
-  file_check_directory($form_values['dav_fs_root'], TRUE, 'dav_fs_root');
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV API HOOKS (NAMESPACE/METADATA)
+// DAV API hooks (namespace/metadata)
 
 /**
  * Implementation of hook_dav_lookup().
@@ -142,7 +132,7 @@ function dav_fs_dav_propfind($resource) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV API HOOKS (VERBS)
+// DAV API hooks (verbs)
 
 /**
  * Implementation of hook_dav_get().
@@ -282,10 +272,8 @@ function dav_fs_dav_copy($resource, $source_path, $target_path) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// DAV FS HELPERS
+// DAV FS helpers
 
 function _dav_fs_mime_type($filepath) {
   return 'application/binary';
 }
-
-//////////////////////////////////////////////////////////////////////////////
