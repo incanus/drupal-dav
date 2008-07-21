@@ -40,6 +40,7 @@ TROUBLESHOOTING
 CREDITS
 -------
 Developed and maintained by Arto Bendiken <http://bendiken.net/>
+Additional development on Drupal 6.x by Justin R. Miller <http://codesorcery.net/>
 Sponsored by MakaluMedia Group <http://www.makalumedia.com/>
 Sponsored by M.C. Dean, Inc. <http://www.mcdean.com/>
 Sponsored by SPAWAR <http://www.spawar.navy.mil/>

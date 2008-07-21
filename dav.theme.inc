@@ -25,7 +25,7 @@ define('DAV_LS_FORMAT', '%12s  %-19s  %-s');
 function theme_dav_page($path, $resources = array()) {
   global $locale;
   $cwd = is_array($path) ? _dav_implode_path($path) : $path;
-  $title = t('Index of %path', array('%path' => $cwd));
+  $title = t('Index of @path', array('@path' => $cwd));
 
   ob_start();
 
@@ -83,7 +83,7 @@ function theme_dav_resource($path, $name, $resource) {
  * @ingroup themeable
  */
 function theme_dav_footer() {
-  return '<address>' . t('Powered by <a href="%url">Drupal</a>.', array('%url' => 'http://drupal.org/project/dav')) . '</address>';
+  return '<address>' . t('Powered by <a href="!url">Drupal</a>.', array('!url' => 'http://drupal.org/project/dav')) . '</address>';
 }
 
 //////////////////////////////////////////////////////////////////////////////

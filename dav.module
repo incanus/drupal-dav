@@ -66,7 +66,7 @@ function dav_menu() {
       'title' => 'DAV',
       'type' => MENU_CALLBACK,
       'access callback'  => 'user_access',
-      'access arguments' => array('access DAV resources'), // further access controls are enforced in the DAV server
+      'access arguments' => array('access content'), // further access controls are enforced in the DAV server
       'page callback' => 'dav_request',
     ),
     // Administer >> Site configuration >> DAV settings
@@ -291,12 +291,20 @@ function dav_request() {
     return drupal_access_denied();
   }
 
+  // Calculate the request path for DAV.
+  $path = substr($_GET['q'], strlen(DAV_ROOT));
+  $path = !empty($path) ? $path : '/';
+
+  // Redirect to a URL ending in a slash if at the top level.
+  // This prevents some relative linking problems further down.
+  if ($path == '/' && !preg_match("/\/$/", $_SERVER['REQUEST_URI'])) {
+    drupal_goto(DAV_ROOT . '/', NULL, NULL, 301);
+  }
+
   // All is green, so boot us up to DAV specs and hand over the reins to our
   // bastard OO offspring of HTTP_WebDAV_Server, pretty much ending Drupal's
   // active involvement in serving the request:
   _dav_load_api();
-  $path = substr($_GET['q'], strlen(DAV_ROOT));
-  $path = !empty($path) ? $path : '/';
   drupal_dav_server::serve(url(DAV_ROOT), $path);
 }
 
@@ -326,8 +334,9 @@ function _dav_get_transient_blob($resource) {
 function _dav_authenticate($name, $pass) {
   // This is an ugly special case to support the LDAP auth module, which
   // does not use Drupal's authentication system.
-  $func = function_exists('_ldapauth_user_authenticate') ? '_ldapauth_user_authenticate' : 'user_authenticate';
-  return $func($name, $pass);
+  //$func = function_exists('_ldapauth_user_authenticate') ? '_ldapauth_user_authenticate' : 'user_authenticate';
+  $func = 'user_authenticate'; // FIXME when LDAP is ported to D6
+  return $func(array('name' => $name, 'pass' => $pass));
 }
 
 function _dav_init_include_path() {

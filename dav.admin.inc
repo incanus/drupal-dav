@@ -19,7 +19,7 @@ function dav_admin_settings() {
     '#title'         => t('DAV server'),
     '#default_value' => (int)DAV_SERVER,
     '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
-    '#description'   => t('Whether to enable the DAV server functionality provided by this module. Note that this requires the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Server</a> library to be available.', array('%url' => DAV_PEAR_SERVER)),
+    '#description'   => t('Whether to enable the DAV server functionality provided by this module. Note that this requires the <a href="!url" target="_blank">PEAR HTTP_WebDAV_Server</a> library to be available.', array('!url' => DAV_PEAR_SERVER)),
   );
   $form['server']['dav_root_url'] = array(
     '#type'          => 'textfield',
@@ -46,7 +46,7 @@ function dav_admin_settings() {
   );
 
   if (DAV_SERVER && !_dav_load_server()) {
-    drupal_set_message(t('Warning: unable to load the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Server</a> library.', array('%url' => DAV_PEAR_SERVER)), 'error');
+    drupal_set_message(t('Warning: unable to load the <a href="!url" target="_blank">PEAR HTTP_WebDAV_Server</a> library.', array('!url' => DAV_PEAR_SERVER)), 'error');
   }
 
   // DAV server modules
@@ -77,11 +77,11 @@ function dav_admin_settings() {
     '#title'         => t('DAV client'),
     '#default_value' => (int)DAV_CLIENT,
     '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
-    '#description'   => t('Whether to attempt loading the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Client</a> library on Drupal initialization in order to provide <tt>webdav://</tt> and <tt>webdavs://</tt> stream wrappers for PHP, allowing the use of remote DAV resources using the regular file system functions in PHP. Disabled by default, enable it if you need it.', array('%url' => DAV_PEAR_CLIENT)),
+    '#description'   => t('Whether to attempt loading the <a href="!url" target="_blank">PEAR HTTP_WebDAV_Client</a> library on Drupal initialization in order to provide <tt>webdav://</tt> and <tt>webdavs://</tt> stream wrappers for PHP, allowing the use of remote DAV resources using the regular file system functions in PHP. Disabled by default, enable it if you need it.', array('!url' => DAV_PEAR_CLIENT)),
   );
 
   if (DAV_CLIENT && !_dav_load_client()) {
-    drupal_set_message(t('Warning: unable to load the <a href="%url" target="_blank">PEAR HTTP_WebDAV_Client</a> library.', array('%url' => DAV_PEAR_CLIENT)), 'error');
+    drupal_set_message(t('Warning: unable to load the <a href="!url" target="_blank">PEAR HTTP_WebDAV_Client</a> library.', array('!url' => DAV_PEAR_CLIENT)), 'error');
   }
 
   // Windows compatibility

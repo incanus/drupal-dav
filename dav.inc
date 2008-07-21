@@ -682,7 +682,7 @@ function _dav_mkprop($x, $y) {
 
 function _dav_trace($method, $options = NULL) {
   if (DAV_TRACE) {
-    if (module_exist('trace')) {
+    if (module_exists('trace')) {
       $msg = strtoupper($method) . '(' . trace_format_php($options) . ');';
       trace('dav', $msg);
     }
