@@ -32,10 +32,10 @@ instance), you can manually download the package from [1] and install the
 files locally in your Drupal instance as follows (you only need these four
 files, and they must be installed with the shown paths):
 
-  modules/dav/includes/HTTP/WebDAV/Server.php
-  modules/dav/includes/HTTP/WebDAV/Tools/_parse_propfind.php
-  modules/dav/includes/HTTP/WebDAV/Tools/_parse_proppatch.php
-  modules/dav/includes/HTTP/WebDAV/Tools/_parse_lockinfo.php
+  modules/dav/vendor/HTTP/WebDAV/Server.php
+  modules/dav/vendor/HTTP/WebDAV/Tools/_parse_propfind.php
+  modules/dav/vendor/HTTP/WebDAV/Tools/_parse_proppatch.php
+  modules/dav/vendor/HTTP/WebDAV/Tools/_parse_lockinfo.php
 
 ____________
 To enable the included DAV client support, which allows PHP applications

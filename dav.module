@@ -342,7 +342,7 @@ function _dav_authenticate($name, $pass) {
 function _dav_init_include_path() {
   static $done = FALSE;
   if (!$done) {
-    set_include_path(dirname(__FILE__) . '/includes' . PATH_SEPARATOR . get_include_path());
+    set_include_path(dirname(__FILE__) . '/vendor' . PATH_SEPARATOR . get_include_path());
     $done = TRUE;
   }
 }

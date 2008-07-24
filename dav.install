@@ -44,7 +44,7 @@ function dav_requirements($phase) {
       $requirements['dav_server'] = array(
         'title' => '',
         'value' => '',
-        'description' => $t('The <a href="@pear">PEAR HTTP_WebDAV_Server</a> library is not installed. You must install this library in order to enable the DAV API. To install, <a href="@download">download</a> the latest version of the library and unzip it to %path under the Drupal directory. For more information please refer to INSTALL.txt.', array('@pear' => 'http://pear.php.net/package/HTTP_WebDAV_Server', '@download' => 'http://pear.php.net/package/HTTP_WebDAV_Server/download', '%path' => drupal_get_path('module', 'dav') . '/includes/')),
+        'description' => $t('The <a href="@pear">PEAR HTTP_WebDAV_Server</a> library is not installed. You must install this library in order to enable the DAV API. To install, <a href="@download">download</a> the latest version of the library and unzip it to %path under the Drupal directory. For more information please refer to INSTALL.txt.', array('@pear' => 'http://pear.php.net/package/HTTP_WebDAV_Server', '@download' => 'http://pear.php.net/package/HTTP_WebDAV_Server/download', '%path' => drupal_get_path('module', 'dav') . '/vendor/')),
         'severity' => REQUIREMENT_ERROR,
       );
     }
