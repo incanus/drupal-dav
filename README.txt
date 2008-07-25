@@ -19,6 +19,7 @@ INSTALL.txt for installation requirements and instructions.
 IMPORTANT NOTES
 ---------------
 * Do NOT define a URL path alias for 'dav'. It will not work.
+* This module has NOT been tested, and may not work, without Clean URLs.
 
 TROUBLESHOOTING
 ---------------
