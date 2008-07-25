@@ -356,7 +356,3 @@ function _dav_load_client() {
   _dav_init_include_path();
   return (@include_once('HTTP/WebDAV/Client.php')) !== FALSE;
 }
-
-function _dav_load_theming() {
-  return module_load_include('inc', 'dav', 'dav.theme');
-}

@@ -166,7 +166,6 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
 
       // Otherwise, the resource should be a collection
       if ($props['resourcetype'] == 'collection') {
-        _dav_load_theming();
         print theme('dav_page', $path, dav_list($resource, $path));
         return FALSE;
       }
