@@ -304,7 +304,7 @@ function dav_request() {
   // All is green, so boot us up to DAV specs and hand over the reins to our
   // bastard OO offspring of HTTP_WebDAV_Server, pretty much ending Drupal's
   // active involvement in serving the request:
-  _dav_load_api();
+  module_load_include('inc', 'dav');
   drupal_dav_server::serve(url(DAV_ROOT), $path);
 }
 
@@ -357,14 +357,6 @@ function _dav_load_client() {
   return (@include_once('HTTP/WebDAV/Client.php')) !== FALSE;
 }
 
-function _dav_load_api() {
-  return (require_once(dirname(__FILE__) . '/dav.inc')) !== FALSE;
-}
-
-function _dav_load_admin() {
-  return (require_once(dirname(__FILE__) . '/dav.admin.inc')) !== FALSE;
-}
-
 function _dav_load_theming() {
-  return (require_once(dirname(__FILE__) . '/dav.theme.inc')) !== FALSE;
+  return module_load_include('inc', 'dav', 'dav.theme');
 }
