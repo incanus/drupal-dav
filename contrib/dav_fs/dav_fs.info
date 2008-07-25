@@ -1,6 +1,6 @@
 ; $Id$
 name = DAV file system
-description = Provides WebDAV access to a administrator-specified file system directory on the server.
+description = Provides WebDAV access to an administrator-specified file system directory on the server.
 package = File management
 dependencies[] = dav
 core = 6.x

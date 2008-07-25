@@ -1,0 +1,17 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * DAV FS module installation and upgrade code.
+ */
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function dav_fs_enable() {
+  drupal_set_message(t('DAV FS successfully installed. Please review the available <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/settings/dav/dav_fs'))));
+}
