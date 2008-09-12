@@ -8,6 +8,7 @@ FEATURES
 --------
 * Unified authentication and access controls: just use your Drupal user name
   and password to login via DAV, too.
+* Works against LDAP authentication provided by ldap_integration.module.
 * The web display of DAV collection indexes is entirely themeable.
 
 INSTALLATION
@@ -41,7 +42,7 @@ TROUBLESHOOTING
 CREDITS
 -------
 Developed and maintained by Arto Bendiken <http://bendiken.net/>
-Additional development on Drupal 6.x by Justin R. Miller <http://codesorcery.net/>
+Development on Drupal 6.x by Justin R. Miller <http://codesorcery.net/>
 Sponsored by MakaluMedia Group <http://www.makalumedia.com/>
 Sponsored by M.C. Dean, Inc. <http://www.mcdean.com/>
 Sponsored by SPAWAR <http://www.spawar.navy.mil/>

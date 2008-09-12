@@ -65,8 +65,8 @@ function dav_menu() {
     DAV_ROOT => array(
       'title' => 'DAV',
       'type' => MENU_CALLBACK,
-      'access callback'  => 'user_access',
-      'access arguments' => array('access content'), // further access controls are enforced in the DAV server
+      'access callback'  => 'is_bool',
+      'access arguments' => array(TRUE), // further access controls are enforced in the DAV server
       'page callback' => 'dav_request',
     ),
     // Administer >> Site configuration >> DAV settings
@@ -334,9 +334,23 @@ function _dav_get_transient_blob($resource) {
 function _dav_authenticate($name, $pass) {
   // This is an ugly special case to support the LDAP auth module, which
   // does not use Drupal's authentication system.
-  //$func = function_exists('_ldapauth_user_authenticate') ? '_ldapauth_user_authenticate' : 'user_authenticate';
-  $func = 'user_authenticate'; // FIXME when LDAP is ported to D6
-  return $func(array('name' => $name, 'pass' => $pass));
+  if (function_exists('ldapauth_login_validate')) {
+    // emulate login form values
+    $form_state = array(
+      'values' => array(
+        'name' => $name,
+        'pass' => $pass
+      ),
+    );
+    // ldapauth_login_validate() returns nothing, but sets global $user
+    global $user;
+    ldapauth_login_validate(NULL, $form_state);
+    return $user;
+  }
+  else {
+    // user_authenticate() returns $user object
+    return user_authenticate(array('name' => $name, 'pass' => $pass));
+  }
 }
 
 function _dav_init_include_path() {
