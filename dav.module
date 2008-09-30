@@ -333,22 +333,14 @@ function _dav_get_transient_blob($resource) {
 
 function _dav_authenticate($name, $pass) {
   // This is an ugly special case to support the LDAP auth module, which
-  // does not use Drupal's authentication system.
-  if (function_exists('ldapauth_login_validate')) {
-    // emulate login form values
-    $form_state = array(
-      'values' => array(
-        'name' => $name,
-        'pass' => $pass
-      ),
-    );
-    // ldapauth_login_validate() returns nothing, but sets global $user
-    global $user;
-    ldapauth_login_validate(NULL, $form_state);
-    return $user;
+  // does not use Drupal's innate authentication API.
+  if (function_exists('ldapauth_authenticate')) {
+    // ldapauth_authenticate() sets the global $user variable if successful
+    ldapauth_authenticate(array('name' => $name, 'pass' => $pass));
+    return $GLOBALS['user'];
   }
   else {
-    // user_authenticate() returns $user object
+    // user_authenticate() returns a $user object
     return user_authenticate(array('name' => $name, 'pass' => $pass));
   }
 }
