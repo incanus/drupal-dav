@@ -576,7 +576,7 @@ function _dav_dispatch($hook) {
 function _dav_implements($hook) {
   // Make sure the DAV core is the first in the list, while preserving any
   // potentially customized load order the other modules may have:
-  return array_unique(array_merge(array('dav'), module_implements('dav_' . $hook)));
+  return array_unique(array_merge(array('dav'), module_implements('dav_'. $hook)));
 }
 
 /**
@@ -592,10 +592,10 @@ function _dav_implements($hook) {
  *   The return value of the hook implementation.
  */
 function _dav_invoke($module, $hook) {
-  $hook = 'dav_' . $hook;
+  $hook = 'dav_'. $hook;
   if (module_hook($module, $hook)) {
     $args = func_get_args();
-    $function = $module . '_' . $hook;
+    $function = $module .'_'. $hook;
     return call_user_func_array($function, array_slice($args, 2));
   }
 }
@@ -615,7 +615,7 @@ function _dav_invoke_all($hook) {
   $hook = array_shift($args);
   $return = array();
   foreach (_dav_implements($hook) as $module) {
-    $function = $module . '_dav_' . $hook;
+    $function = $module .'_dav_'. $hook;
     $result = call_user_func_array($function, $args);
     if (is_array($result)) {
       // Not using array_merge() here as it renumbers numerical keys
@@ -655,7 +655,7 @@ function _dav_resources($path, $parent, $depth = 0) {
 }
 
 function _dav_implode_path($path, $name = NULL) {
-  return (empty($path) ? '/' : '/' . implode('/', $path) . '/') . ($name ? $name : '');
+  return (empty($path) ? '/' : '/'. implode('/', $path) .'/') . ($name ? $name : '');
 }
 
 function _dav_explode_path($path) {
@@ -682,11 +682,11 @@ function _dav_mkprop($x, $y) {
 function _dav_trace($method, $options = NULL) {
   if (DAV_TRACE) {
     if (module_exists('trace')) {
-      $msg = strtoupper($method) . '(' . trace_format_php($options) . ');';
+      $msg = strtoupper($method) .'('. trace_format_php($options) .');';
       trace('dav', $msg);
     }
     else {
-      //@include_once(dirname(__FILE__) . '/debug.inc'); // DEBUG
+      //@include_once(dirname(__FILE__) .'/debug.inc'); // DEBUG
       //dump($method, $options); // DEBUG
     }
   }

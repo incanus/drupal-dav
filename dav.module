@@ -39,7 +39,7 @@ define('DAV_TRANSIENT_RESOURCE', 'dav_blob');
 function dav_help($path, $arg = NULL) {
   switch ($path) {
     case 'admin/settings/dav':
-      return '<p>' . t('') . '</p>'; // TODO
+      return '<p>'. t('') .'</p>'; // TODO
   }
 }
 
@@ -146,7 +146,7 @@ function dav_dav_list($collection) {
 
   $resources = array();
   if (($container_id = dav_intern_resource($collection, NULL, FALSE)) !== NULL) {
-    $result = db_query("SELECT * FROM {dav_resources} WHERE type = '%s' AND `key` LIKE '%s'", DAV_TRANSIENT_RESOURCE, $container_id . '#%');
+    $result = db_query("SELECT * FROM {dav_resources} WHERE type = '%s' AND `key` LIKE '%s'", DAV_TRANSIENT_RESOURCE, $container_id .'#%');
     while ($resource = db_fetch_object($result)) {
       if (($blob = db_fetch_object(db_query("SELECT * FROM {dav_blobs} WHERE resource_id = %d AND user_id = %d", $resource->id, $user->uid)))) {
         list(, $name) = explode('#', $resource->key, 2);
@@ -225,7 +225,7 @@ function dav_dav_put($container, $name, &$options, $filepath = NULL) {
       return TRUE; // accept the file upload
     }
     else { // post-process upload
-      $resource = array(DAV_TRANSIENT_RESOURCE, dav_intern_resource($container) . '#' . $name);
+      $resource = array(DAV_TRANSIENT_RESOURCE, dav_intern_resource($container) .'#'. $name);
       $resource_id = dav_intern_resource($resource, 'dav');
       return db_query("REPLACE INTO {dav_blobs} (resource_id, user_id, content_type, content_length, content) VALUES (%d, %d, '%s', %d, %b)", $resource_id, $user->uid, $options['content_type'], filesize($filepath), file_get_contents($filepath));
     }
@@ -299,7 +299,7 @@ function dav_request() {
   // Redirect to a URL ending in a slash if at the top level.
   // This prevents some relative linking problems further down.
   if ($path == '/' && !preg_match("/\/$/", $_SERVER['REQUEST_URI'])) {
-    drupal_goto(DAV_ROOT . '/', NULL, NULL, 301);
+    drupal_goto(DAV_ROOT .'/', NULL, NULL, 301);
   }
 
   // All is green, so boot us up to DAV specs and hand over the reins to our
@@ -373,7 +373,7 @@ function _dav_authenticate($name, $pass) {
 function _dav_init_include_path() {
   static $done = FALSE;
   if (!$done) {
-    set_include_path(dirname(__FILE__) . '/vendor' . PATH_SEPARATOR . get_include_path());
+    set_include_path(dirname(__FILE__) .'/vendor'. PATH_SEPARATOR . get_include_path());
     $done = TRUE;
   }
 }

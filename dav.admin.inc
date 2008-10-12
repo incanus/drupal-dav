@@ -24,7 +24,7 @@ function dav_admin_settings() {
   $form['server']['dav_root_url'] = array(
     '#type'          => 'textfield',
     '#title'         => t('DAV URL'),
-    '#default_value' => url(DAV_ROOT . '/', array('absolute' => TRUE)),
+    '#default_value' => url(DAV_ROOT .'/', array('absolute' => TRUE)),
     '#size'          => 60,
     '#maxlength'     => 255,
     '#description'   => t('This is the absolute URL to the DAV root collection provided by this module, if the DAV server functionality has been enabled above. Use this path in your DAV client program to access the DAV resources exported by this Drupal site. Note that, at present, this path can\'t be aliased or changed.'),
