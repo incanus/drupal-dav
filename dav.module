@@ -10,12 +10,13 @@
 //////////////////////////////////////////////////////////////////////////////
 // Module settings
 
-define('DAV_ROOT',      variable_get('dav_root', 'dav'));
-define('DAV_SERVER',    variable_get('dav_server', FALSE));
-define('DAV_CLIENT',    variable_get('dav_client', FALSE));
-define('DAV_DOT_FILES', variable_get('dav_dot_files', TRUE));
-define('DAV_TRACE',     variable_get('dav_trace', FALSE));
-define('DAV_CRON',      variable_get('dav_cron', TRUE));
+define('DAV_ROOT',        variable_get('dav_root', 'dav'));
+define('DAV_ROOT_MODULE', variable_get('dav_root_module', 'dav_fs'));
+define('DAV_SERVER',      variable_get('dav_server', FALSE));
+define('DAV_CLIENT',      variable_get('dav_client', FALSE));
+define('DAV_DOT_FILES',   variable_get('dav_dot_files', TRUE));
+define('DAV_TRACE',       variable_get('dav_trace', FALSE));
+define('DAV_CRON',        variable_get('dav_cron', TRUE));
 
 define('DAV_WINDOWS_SERVER_DISCOVERY', variable_get('dav_windows_server_discovery', TRUE));
 define('DAV_WINDOWS_BASIC_AUTH',       variable_get('dav_windows_basic_auth', TRUE));
@@ -310,6 +311,30 @@ function dav_request() {
 
 //////////////////////////////////////////////////////////////////////////////
 // DAV core helpers
+
+function dav_get_modules($op = NULL) {
+  switch ($op) {
+    case 'info':
+      $modules = dav_get_modules();
+      if (!empty($modules)) {
+        $result = db_query("SELECT name, info FROM {system} WHERE type = 'module' AND name IN (". db_placeholders($modules, 'varchar') .") ORDER BY weight ASC", $modules);
+        while ($row = db_fetch_object($result)) {
+          $modules[$row->name] = (object)unserialize($row->info);
+        }
+      }
+      return $modules;
+    case 'titles':
+      $modules = dav_get_modules('info');
+      foreach ($modules as $name => $info) {
+        $modules[$name] = $info->name;
+      }
+      return $modules;
+    case 'names':
+    default:
+      $modules = array_diff(module_implements('dav_list'), array('dav'));
+      return array_combine($modules, $modules);
+  }
+}
 
 function _dav_is_transient_file($name) {
   return ($name[0] == '.'); // TODO

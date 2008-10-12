@@ -51,24 +51,27 @@ function dav_admin_settings() {
 
   // DAV server modules
   $form['modules'] = array('#type' => 'fieldset', '#title' => t('DAV server modules'), '#collapsible' => TRUE, '#collapsed' => TRUE);
-  $modules = module_implements('dav_list');
-  if (!empty($modules)) {
-    sort($modules);
-
+  if (count(dav_get_modules()) > 0) {
     $header = array(t('Name'), t('Description'));
-    $rows = array();
-    foreach ($modules as $module) {
-      if ($module != 'dav') {
-        $info = unserialize(db_result(db_query("SELECT info FROM {system} WHERE type = 'module' AND name = '%s'", $module)));
-        $rows[] = array($info['name'], $info['description']);
-      }
+    $rows   = array();
+    foreach (dav_get_modules('info') as $name => $info) {
+      $rows[] = array($info->name, $info->description);
     }
     $modules = theme('table', $header, $rows);
   }
   else {
-    $modules = '<div>' . t('No DAV modules currently installed; DAV server disabled.') . '</div>';
+    $modules = '<div>'. t('No DAV modules currently installed; DAV server disabled.') .'</div>';
   }
   $form['modules']['dav_modules'] = array('#type' => 'markup', '#value' => $modules);
+  if (count(dav_get_modules()) > 0) {
+    $form['modules']['dav_root_module'] = array(
+      '#type'          => 'select',
+      '#title'         => t('Root collection owner'),
+      '#default_value' => (int)DAV_ROOT_MODULE,
+      '#options'       => dav_get_modules('titles'),
+      '#description'   => t('Select which module should have ownership of the file/collection creation process in the DAV root collection. While all DAV server modules may publish items in the root collection, to prevent ambiguity only one module can respond to top-level PUT/CREATE requests.'),
+    );
+  }
 
   // DAV client settings
   $form['client'] = array('#type' => 'fieldset', '#title' => t('DAV client settings'), '#collapsible' => TRUE, '#collapsed' => TRUE);
