@@ -15,6 +15,7 @@ define('STATUS_201', '201 Created');
 define('STATUS_204', '204 No Content');
 define('STATUS_207', '207 Multi-Status');
 define('STATUS_403', '403 Forbidden');
+define('STATUS_404', '404 Not Found');
 define('STATUS_405', '405 Method Not Allowed');
 define('STATUS_409', '409 Conflict');
 define('STATUS_412', '412 Precondition Failed');
@@ -128,7 +129,7 @@ class drupal_dav_server extends HTTP_WebDAV_Server {
    *   'type' ('shared'/'exclusive'), 'token' and 'timeout'.
    */
   function checklock($path) {
-    $path = _dav_explode_path($options['path']);
+    $path = _dav_explode_path($path);
     if (($resource = _dav_resolve($path)) && ($resource_id = dav_intern_resource($resource))) {
       $result = db_query('SELECT l.* FROM {dav_locks} l WHERE l.resource_id = %d', $resource_id);
       if (($lock = db_fetch_object($result))) {
