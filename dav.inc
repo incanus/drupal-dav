@@ -556,7 +556,7 @@ function _dav_dispatch($hook) {
   $args = func_get_args();
   //_dav_trace('dispatch', $args); // DEBUG
 
-  foreach (_dav_implements($hook) as $module) {
+  foreach (_dav_implements($hook, array_slice($args, 1)) as $module) {
     $func_args = array_merge(array($module), $args);
     if (($result = call_user_func_array('_dav_invoke', $func_args)) !== NULL)
       return $result;
@@ -573,10 +573,23 @@ function _dav_dispatch($hook) {
  * @return
  *   An array with the names of the modules which implement this hook.
  */
-function _dav_implements($hook) {
+function _dav_implements($hook, array $args = array()) {
+  $modules = module_implements('dav_'. $hook);
+  $prepend = array('dav');
+
+  // HACK: This is a special case for MKCOL/PUT requests in the root
+  // collection. It's needed to prevent ambiguity and to let the
+  // administrator select which module should handle these requests (see
+  // the option 'Root collection owner' at admin/settings/dav).
+  if (($hook == 'mkcol' || $hook == 'put') && module_exists(DAV_ROOT_MODULE)) {
+    if (isset($args[0][0]) && $args[0][0] == ROOT_COLLECTION) {
+      $prepend = array_merge($prepend, array(DAV_ROOT_MODULE));
+    }
+  }
+
   // Make sure the DAV core is the first in the list, while preserving any
   // potentially customized load order the other modules may have:
-  return array_unique(array_merge(array('dav'), module_implements('dav_'. $hook)));
+  return array_unique(array_merge($prepend, $modules));
 }
 
 /**
@@ -614,7 +627,7 @@ function _dav_invoke_all($hook) {
   $args = func_get_args();
   $hook = array_shift($args);
   $return = array();
-  foreach (_dav_implements($hook) as $module) {
+  foreach (_dav_implements($hook, $args) as $module) {
     $function = $module .'_dav_'. $hook;
     $result = call_user_func_array($function, $args);
     if (is_array($result)) {
