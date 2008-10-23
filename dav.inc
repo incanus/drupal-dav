@@ -583,7 +583,7 @@ function _dav_implements($hook, array $args = array()) {
   // administrator select which module should handle these requests (see
   // the option 'Root collection owner' at admin/settings/dav).
   if (($hook == 'mkcol' || $hook == 'put') && module_exists(DAV_ROOT_MODULE)) {
-    if (isset($args[0][0]) && $args[0][0] == ROOT_COLLECTION) {
+    if (isset($args[0]) && array_key_exists(0, $args[0]) && $args[0][0] == DAV_ROOT_COLLECTION) {
       $prepend = array_merge($prepend, array(DAV_ROOT_MODULE));
     }
   }
