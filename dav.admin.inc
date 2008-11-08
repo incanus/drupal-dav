@@ -44,6 +44,14 @@ function dav_admin_settings() {
     '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
     '#description'   => t('Whether to log debug/troubleshooting information on all DAV HTTP methods. Note that enabling this will have a negative impact on performance and you should never use this except for troubleshooting purposes. <em>Requires trace.module.</em>'),
   );
+  $form['server']['dav_icons'] = array(
+    '#type'          => 'radios',
+    '#title'         => t('Enable web listing icons'),
+    '#default_value' => module_exists('file') ? (int)DAV_ICONS : FALSE,
+    '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
+    '#description'   => t('Whether to show MIME type icons next to files and directories when browsing the DAV listing in a web browser (i.e., using HTTP GET). <em>Requires FileFramework.</em>'),
+    '#attributes'    => !module_exists('file') ? array('disabled' => 'disabled') : array(),
+  );
   $form['server']['dav_encode'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Characters to encode'),

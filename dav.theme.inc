@@ -72,7 +72,33 @@ function theme_dav_resource($path, $name, $resource) {
   $mtime = format_date($mtime, 'small');
   $slash = ($props['resourcetype'] == 'collection') ? '/' : '';
   $name = check_plain($name);
-  $link = '<a href="./'. $name . $slash .'" class="dav '. $type .'">'. $name .'</a>'. $slash;
+  if (DAV_ICONS) {
+    if ($props['getcontenttype'] == 'httpd/unix-directory') {
+      $icon .= drupal_get_path('module', 'file_browser');
+      $icon .= '/icons/folder.png"';
+    }
+    else {
+      $type = $props['getcontenttype'];
+      /**
+       * Borrowed from FileFramework's file_mime_icon_for().
+       */
+      $handlers = file_get_mime_types();
+      $default_mime_types = file_default_mime_types();
+      $icon = is_array($handlers[$type]['icon']) ? reset($handlers[$type]['icon']) : $handlers[$type]['icon'];
+      $icon = isset($icon) ? $icon : (in_array(preg_replace('/([^\/]+).*/', '$1/*', $type), array_keys($default_mime_types)) ? $default_mime_types[preg_replace('/([^\/]+).*/', '$1/*', $type)]['icon'] : '');
+      /**
+       * End borrowed code.
+       */
+      $icon = drupal_get_path('module', 'file') .'/icons/'. $icon;
+    }
+    $image  = '<img src="' . base_path() . $icon . '" ';
+    $image .= 'valign="middle" ';
+    $image .= 'alt="' . $type . '" ';
+    $image .= 'title="' . $type . '" ';
+    $image .= '/> ';
+  }
+  
+  $link = $image . '<a href="./'. $name . $slash .'" class="dav '. $type .'">'. $name .'</a>'. $slash;
 
   return sprintf(DAV_LS_FORMAT . "\n", $size, $mtime, $link);
 }
