@@ -16,6 +16,7 @@ define('DAV_SERVER',      variable_get('dav_server', FALSE));
 define('DAV_CLIENT',      variable_get('dav_client', FALSE));
 define('DAV_DOT_FILES',   variable_get('dav_dot_files', TRUE));
 define('DAV_TRACE',       variable_get('dav_trace', FALSE));
+define('DAV_ENCODE',      variable_get('dav_encode', ' &<>|'));
 define('DAV_CRON',        variable_get('dav_cron', TRUE));
 
 define('DAV_WINDOWS_SERVER_DISCOVERY', variable_get('dav_windows_server_discovery', TRUE));

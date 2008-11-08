@@ -44,6 +44,14 @@ function dav_admin_settings() {
     '#options'       => array(FALSE => t('Disabled'), TRUE => t('Enabled')),
     '#description'   => t('Whether to log debug/troubleshooting information on all DAV HTTP methods. Note that enabling this will have a negative impact on performance and you should never use this except for troubleshooting purposes. <em>Requires trace.module.</em>'),
   );
+  $form['server']['dav_encode'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Characters to encode'),
+    '#default_value' => DAV_ENCODE,
+    '#size'          => 60,
+    '#maxlength'     => 255,
+    '#description'   => t('Characters to encode in path and file names per !rfc. Unless you know what you are doing and grok what this is all about, it is recommended that you leave this setting unchanged.', array('!rfc' => l('RFC 1738', 'http://www.ietf.org/rfc/rfc1738.txt'))),
+  );
 
   if (DAV_SERVER && !_dav_load_server()) {
     drupal_set_message(t('Warning: unable to load the <a href="!url" target="_blank">PEAR HTTP_WebDAV_Server</a> library.', array('!url' => DAV_PEAR_SERVER)), 'error');

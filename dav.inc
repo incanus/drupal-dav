@@ -677,7 +677,13 @@ function _dav_explode_path($path) {
 }
 
 function _dav_urlencode($url) {
-  return HTTP_WebDAV_Server::_urlencode($url);
+  $map = array();
+  for ($i = 0; $i < strlen(DAV_ENCODE); $i++) {
+    $character = substr(DAV_ENCODE, $i, 1);
+    $map[$character] = rawurlencode($character);
+  }
+
+  return strtr($url, $map);
 }
 
 function _dav_tmpname() {
