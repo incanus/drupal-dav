@@ -727,7 +727,7 @@ function dav_intern_resource($resource, $module = '', $auto_create = TRUE) {
     return $row->id;
   }
   else if ($auto_create) {
-    $resource_id = db_next_id('{dav_resources}_id');
+    $resource_id = db_last_insert_id('dav_resources', 'id');
     db_query("INSERT INTO {dav_resources} (id, type, `key`, module) VALUES (%d, '%s', '%s', '%s')", $resource_id, $type, $key, $module);
     return $resource_id;
   }
@@ -736,7 +736,7 @@ function dav_intern_resource($resource, $module = '', $auto_create = TRUE) {
 function dav_obtain_lock($resource, $token, $timeout, $is_writelock = TRUE, $is_exclusive = FALSE, $depth = 0) {
   global $user;
   if (($resource_id = dav_intern_resource($resource))) {
-    db_query("INSERT INTO {dav_locks} (id, resource_id, user_id, token, depth, is_writelock, is_exclusive, created_at, updated_at, expires_at) VALUES (%d, %d, %d, '%s', %d, %d, %d, %d, %d, %d)", db_next_id('{dav_locks}_id'), $resource_id, $user->uid, $token, $depth, $is_writelock, $is_exclusive, time(), time(), $timeout);
+    db_query("INSERT INTO {dav_locks} (id, resource_id, user_id, token, depth, is_writelock, is_exclusive, created_at, updated_at, expires_at) VALUES (%d, %d, %d, '%s', %d, %d, %d, %d, %d, %d)", db_last_insert_id('dav_locks' , 'id'), $resource_id, $user->uid, $token, $depth, $is_writelock, $is_exclusive, time(), time(), $timeout);
     return TRUE; // TODO: check affected rows
   }
 }
